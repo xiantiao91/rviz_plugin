@@ -8,12 +8,12 @@
 
 class AutoSubscriberDisplay : public rviz::/*Display*/MessageFilterDisplay<sensor_msgs::PointCloud2>
 {
-
+   Q_OBJECT
 public:
    AutoSubscriberDisplay();
   virtual ~AutoSubscriberDisplay();
 
-//   Q_OBJECT
+
 protected:
   virtual void onInitialize();
 //  virtual void update(float wall_dt, float ros_dt);
