@@ -1,5 +1,7 @@
 <library path="lib/libmy_rviz_plugin">
-  <class name="AutoSubscriberDisplay" type="AutoSubscriberDisplay" base_class_type="rviz::Display">
+  <class name="rviz_plugin_tutorials::AutoSubscriberDisplay"
+  type="rviz_plugin_tutorials::AutoSubscriberDisplay"
+  base_class_type="rviz::Display">
     <description> This is a custom display plugin that subscribes to a PointCloud2 topic automatically. </description>
     <qtgui>
       <label>AutoSubscriber Display</label>

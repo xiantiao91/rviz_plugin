@@ -6,14 +6,12 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
+
 find_package(Qt5 REQUIRED COMPONENTS Widgets Core)
 set(QT_LIBRARIES Qt5::Widgets)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -34,7 +32,9 @@ include_directories(
 )
 link_directories(${catkin_LIBRARY_DIRS})
 
-add_library(${PROJECT_NAME} src/auto_subscriber_display.cpp)
+qt5_wrap_cpp(MOC_FILES include/my_rviz_plugin/auto_subscriber_display.h OPTIONS -I${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_library(${PROJECT_NAME} src/auto_subscriber_display.cpp ${MOC_FILES})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${rviz_LIBRARIES} ${QT_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME}
