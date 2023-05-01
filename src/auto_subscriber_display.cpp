@@ -4,14 +4,16 @@
 #include <pluginlib/class_list_macros.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <std_msgs/UInt32.h>
+//using namespace rviz;
 namespace rviz_plugin_tutorials
 {
 
 AutoSubscriberDisplay::AutoSubscriberDisplay() : submap_count_(0)
 {
+    update_nh_.setCallbackQueue(&update_queue_);
     ROS_INFO_STREAM("AutoSubscriberDisplay plugin loaded.");
     //    point_cloud_common_ = new rviz::PointCloudCommon(this);
-    point_cloud_common_.reset(new CustomPointCloudCommon(this));
+//    ROS_INFO("%d  %s", __LINE__,__FILE__);
 }
 
 AutoSubscriberDisplay::~AutoSubscriberDisplay()
@@ -20,6 +22,8 @@ AutoSubscriberDisplay::~AutoSubscriberDisplay()
 
 void AutoSubscriberDisplay::onInitialize()
 {
+    rviz::Display::onInitialize();
+    point_cloud_common_.reset(new CustomPointCloudCommon(this,context_));
     last_update_time_ = getSystemTime();
     ROS_INFO(__FUNCTION__);
     MessageFilterDisplay::onInitialize();
@@ -106,18 +110,29 @@ std::map<int,bool> AutoSubscriberDisplay::getNeedUpdateSubmap(const std::map<int
 
 void AutoSubscriberDisplay::processPointCloud(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-    processMessage(msg);
+//    processMessage(msg);
 }
 void AutoSubscriberDisplay::processMessage(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
     //    sensor_msgs::PointCloud2 display_msg = *msg;
 
     // Call the method of the point_cloud_common_ object to actually display the point cloud
-    point_cloud_common_->addMessage(msg);
+//    point_cloud_common_->addMessage(msg);
 }
 
 void AutoSubscriberDisplay::colorizePoint(pcl::PointXYZRGB& p, double min_z, double max_z)
 {
+//    double height = p.z;
+//    double ratio = (height - min_z) / (max_z - min_z);
+//    double r, g, b;
+//    // Linear mapping of height to RGB color space
+//    r = std::min(2 * ratio, 1.0);
+//    g = 0.0;
+//    b = std::min(2 * (1 - ratio), 1.0);
+//    // Set the color of the output point
+//    p.r = r * 255;
+//    p.g = g * 255;
+//    p.b = b * 255;
     double height = p.z;
     double ratio = (height - min_z) / (max_z - min_z);
     double r, g, b;
@@ -198,25 +213,41 @@ void AutoSubscriberDisplay::update(float wall_dt, float ros_dt)
                 if(data.second)
                 {
                     int id = data.first;
+                    const auto it = std::find_if(submap_list.submap.begin(), submap_list.submap.end(),
+                                                 [id](const cartographer_ros_msgs::SubmapEntry& e){return e.submap_index == id;});
+                    const cartographer_ros_msgs::SubmapEntry& entry = *it;
                     //Determine if submap points exist
                     if(map_points_.find(id) != map_points_.end() && data.first != max_submap_id)
                     {
                         //pose change ,update submap with new pose
                         ROS_INFO("pose change ,update submap with new pose: %d", data.first);
+                        point_cloud_common_->mutex_map_points_.lock();
+                        localPointsToWor(map_points_[id].local_points,
+                                         point_cloud_common_->getMapPointsById(id)/*map_points_[id].global_points*/, entry.pose);
+                        point_cloud_common_->update_flag_[id] = true;
+                        point_cloud_common_->mutex_map_points_.unlock();
                     }
                     else
                     {
-                        const auto it = std::find_if(submap_list.submap.begin(), submap_list.submap.end(),
-                                                     [id](const cartographer_ros_msgs::SubmapEntry& e){return e.submap_index == id;});
-                        const cartographer_ros_msgs::SubmapEntry& entry = *it;
-
                         //get map points
                         map_points_[id].local_points = getSubmapPoints(0,id,min_points_score_);
+                        point_cloud_common_->mutex_map_points_.lock();
                         localPointsToWor(map_points_[id].local_points,
-                                         map_points_[id].global_points, entry.pose);
+                                         point_cloud_common_->getMapPointsById(id)/*map_points_[id].global_points*/, entry.pose);
+                        point_cloud_common_->update_flag_[id] = true;
+                        point_cloud_common_->mutex_map_points_.unlock();
+//                        const sensor_msgs::PointCloud2& global_points = ;
+                        const cartographer_ros_msgs::GetSubmapPoints::Response::_points_type& local_points = map_points_[id].local_points;
+                        ROS_INFO("submap id: %d  points size: %d", id, local_points.size());
                     }
                 }
             }
+            {
+              boost::recursive_mutex::scoped_lock lock(update_mutex_);
+              update_queue_.callAvailable();
+              point_cloud_common_->update(wall_dt, ros_dt);
+            }
+
         }
         MessageFilterDisplay::update(wall_dt, ros_dt);
         // 更新上次更新时间

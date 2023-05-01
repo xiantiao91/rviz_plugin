@@ -10,6 +10,7 @@
 #include <pcl/point_types.h>
 
 #include <cartographer_ros_msgs/GetSubmapPoints.h>
+#include "custom_point_cloud_common.h"
 //#include <rviz
 
 namespace rviz_plugin_tutorials
@@ -65,10 +66,15 @@ private:
 //    cartographer_ros_msgs::SubmapList updated_submap_list_;
     std::map<int,cartographer_ros_msgs::SubmapEntry> updated_submap_list_;
     boost::mutex mutex_submap_list_;
-    boost::shared_ptr<CustomPointCloudCommon> point_cloud_common_;
+    boost::shared_ptr<CustomPointCloudCommon> point_cloud_common_ = nullptr;
     double min_points_score_ = 0.75;
     double min_z_color_ = -5.0;
     double max_z_color_ = 20.0;
+
+private:
+  ros::NodeHandle update_nh_;
+  ros::CallbackQueue update_queue_;
+  boost::recursive_mutex update_mutex_;
 };
 
 }
